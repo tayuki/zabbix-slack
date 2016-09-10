@@ -17,11 +17,15 @@ zabbix_password="zabbixpassword"
 
 # chart settings
 chart_period=3600
-chart_width=1280
+chart_width=700
 chart_height=390
 chart_baseurl="${zabbix_baseurl}/slack_charts"
 chart_basedir="/tmp/slack_charts"
 chart_cookie="/tmp/zcookies.txt"
+
+# s3 settings
+s3_bucket="bucket-name"
+s3_config_path="/path/to/config/.s3cfg"
 
 # set params
 host="`echo \"${params}\" | grep 'HOST: ' | awk -F'HOST: ' '{print $2}' | sed -e 's///g'`"
@@ -40,7 +44,8 @@ if [ "${item_id}" != "" ]; then
 
     ${cmd_wget} --save-cookies="${chart_cookie}_${timestamp}" --keep-session-cookies --post-data "name=${zabbix_username}&password=${zabbix_password}&enter=Sign+in" -O /dev/null -q "${zabbix_baseurl}/index.php?login=1"
     ${cmd_wget} --load-cookies="${chart_cookie}_${timestamp}"  -O "${chart_basedir}/graph-${item_id}-${timestamp}.png" -q "${zabbix_baseurl}/chart.php?&itemids=${item_id}&width=${chart_width}&period=${chart_period}"
-    chart_url="${chart_baseurl}/graph-${item_id}-${timestamp}.png"
+		s3cmd -c ${s3_config_path} --acl-public put ${chart_basedir}/graph-${item_id}-${timestamp}.png s3:${s3_bucket}
+    chart_url="http://${s3_bucket}/graph-${item_id}-${timestamp}.png"
     rm -f ${chart_cookie}_${timestamp}
 
     # if triger url is empty then we link to the graph with the item_id
